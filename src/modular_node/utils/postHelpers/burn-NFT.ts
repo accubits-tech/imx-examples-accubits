@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { ERC721TokenType, ImmutableMethodResults } from '@imtbl/imx-sdk';
 import { getClient } from '../client';
+import {TokenType } from '@imtbl/core-sdk';
 
  export async function burnNFT(ownerPrivateKey: string, tokenId: string, tokenAddress: string, network: string): Promise<ImmutableMethodResults.ImmutableBurnResult> {
     const client = await getClient(network, ownerPrivateKey);  

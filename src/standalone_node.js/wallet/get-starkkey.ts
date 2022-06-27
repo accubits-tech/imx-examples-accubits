@@ -3,6 +3,9 @@
 import env from '../../config/client';
 import yargs from 'yargs';
 import axios from 'axios';
+import {UsersApi, getConfig, EthNetwork } from '@imtbl/core-sdk';
+
+
 
 interface UserResponse {
   accounts: string[]
@@ -20,8 +23,12 @@ const argv = yargs(process.argv.slice(2))
 
 async function main(walletAddress: string) {
   const url = env.client.publicApiUrl + `/users/${walletAddress}`;
-  const response = await api(url);
-  console.log(response);
+  //const response = await api(url);
+  const network= process.env.ETH_NETWORK
+  const config = getConfig(network as EthNetwork);
+  const usersApi = new UsersApi(config.api);
+  const response = await usersApi.getUsers({user:walletAddress});
+  console.log(response)
 };
 
 main(argv.a)

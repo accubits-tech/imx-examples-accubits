@@ -1,4 +1,4 @@
-import axios from 'axios';
+import {getConfig, MintsApi, Mint, EthNetwork } from '@imtbl/core-sdk';
 
 interface MintResponse {
   transaction_id: number,
@@ -14,8 +14,11 @@ interface MintResponse {
  * @param mintID - unique mint identifier.
  * @returns 
  */
-export async function getMint(mintID: number): Promise<MintResponse[]> {
-  const url = `https://api.ropsten.x.immutable.com/v1/mints/${mintID}`;
-  const { data } = await axios.request({ url });
-  return data;
+export async function getMint(mintID: number): Promise<Mint> {
+  const network= process.env.ETH_NETWORK
+  const config = getConfig(network as EthNetwork);
+  const mintsApi = new MintsApi(config.api);
+  const response = await mintsApi.getMint({id:mintID.toString()});
+  console.log(response)
+  return response.data||{};
 }

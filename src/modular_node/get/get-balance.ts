@@ -2,7 +2,8 @@
 
 import yargs from 'yargs';
 import { ethers, Wallet } from 'ethers';
-import { getClient } from '../utils/client';
+import { EthNetwork, getConfig, Workflows, BalancesApi} from '@imtbl/core-sdk';
+
 /**
  * This function shows the ETH balance of a given wallet.
  */
@@ -16,9 +17,12 @@ import { getClient } from '../utils/client';
  * Return the current Layer 2 ETH balance for a user.
  */
 async function getUserBalance(address: string, network:string): Promise<void> {
-  const client = await getClient(network);
-  const response = await client.getBalance({ user: address, tokenAddress: 'eth' });
-  console.log(`User ETH balance on IMX: ${response.balance}`);
+
+  const config = getConfig(network as EthNetwork); 
+  const balancesApi = new BalancesApi(config.api);
+  const response = await balancesApi.getBalance({owner: address, address: 'eth'});
+  const data =response?.data||{};
+  console.log(`User ETH balance on IMX: ${data.balance}`);
 }
 
 /**
@@ -26,9 +30,14 @@ async function getUserBalance(address: string, network:string): Promise<void> {
  * as ETH, IMX etc.
  */
  async function listUserBalances(address: string, network: string): Promise<void> {
-  const client = await getClient(network);
-  const response = await client.listBalances({ user: address });
-  for (const bal of response.result) {
+  // const client = await getClient(network);
+  // const response = await client.listBalances({ user: address });
+
+  const config = getConfig(network as EthNetwork); 
+  const balancesApi = new BalancesApi(config.api);
+  const response = await balancesApi.listBalances({owner: address});
+  const data = response?.data||{};
+  for (const bal of data.result) {
     console.log(`Token: ${bal.symbol}`);
     console.log(`Balance: ${bal.balance}`);
     console.log(`Withdrawal being prepared: ${bal.preparing_withdrawal}`);

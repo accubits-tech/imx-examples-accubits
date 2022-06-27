@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 import yargs from 'yargs';
-import { getClient } from '../utils/client';
-import { ImmutableMethodResults } from '@imtbl/imx-sdk';
+import {getConfig,AssetsApi, ListAssetsResponse, EthNetwork } from '@imtbl/core-sdk';
 
 /**
  * Return the users current asset holding.
  */
-async function getUserAssets(address: string, network: string): Promise<ImmutableMethodResults.ImmutableGetAssetsResult> {
-  const client = await getClient(network);
-  const response = await client.getAssets({ user: address });
-  return response
+async function getUserAssets(address: string, network: EthNetwork): Promise<ListAssetsResponse> {
+  // const client = await getClient(network);
+  // const response = await client.getAssets({ user: address });
+  const config = getConfig(network); 
+  const assetsApi = new AssetsApi(config.api);
+  const response = await assetsApi.listAssets({user:address});
+  console.log(response)
+  return response?.data||{}
 }
 
-async function main(walletAddress: string, network: string): Promise<void> {
+async function main(walletAddress: string, network: EthNetwork): Promise<void> {
   const response = await getUserAssets(walletAddress, network);
   if (response.result.length === 0) {
     console.log('User has no assets.');
@@ -29,5 +32,5 @@ const argv = yargs(process.argv.slice(2))
   network: { describe: 'network. ropsten or mainnet', type: 'string', demandOption: true}})
   .parseSync();
 
-main(argv.a, argv.network)
+main(argv.a, argv.network as EthNetwork)
   .catch(err => console.error(err));
