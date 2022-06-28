@@ -1,8 +1,4 @@
-import { burnNFT } from '../utils/postHelpers/burn-NFT';
-import { getBurn } from '../utils/getHelpers/get-burn';
-import { getMint } from '../utils/getHelpers/get-mint';
-import { mintV2 } from '../utils/postHelpers/mintV2';
-import { ethers, Wallet } from 'ethers';
+import { Wallet } from 'ethers';
 
 import yargs from 'yargs';
 import {
@@ -29,7 +25,7 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     const provider = new AlchemyProvider(network, process.env.ALCHEMY_API_KEY);
     const signer = new Wallet(ownerPrivateKey).connect(provider);
     const { starkWallet } = await generateWallets(provider);
-    console.log("burnRequestParam")
+    console.log('burnRequestParam');
     const burnRequestParam: UnsignedBurnRequest = {
       amount: '1',
       sender: '0xdd8C03c3a9e886De275e003cd3ed2a8E24ca87ca',
@@ -41,16 +37,16 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
         },
       },
     };
-    console.log(burnRequestParam)
-    console.log(signer)
-    console.log(starkWallet)
-    
+    console.log(burnRequestParam);
+    console.log(signer);
+    console.log(starkWallet);
+
     const burnResponse = await workflows.burn(
       signer,
       starkWallet,
       burnRequestParam,
     );
-    console.log("burnResponse");
+    console.log('burnResponse');
     console.log(burnResponse);
     //Give API time to register the burn
     await new Promise(f => setTimeout(f, 3000));
