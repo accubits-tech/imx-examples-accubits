@@ -1,5 +1,3 @@
-import { Wallet } from 'ethers';
-
 import yargs from 'yargs';
 import {
   getConfig,
@@ -11,8 +9,10 @@ import {
   MintsApi,
   Mint,
   MintsApiMintTokensRequest,
+  signRaw,
 } from '@imtbl/core-sdk';
 import { AlchemyProvider } from '@ethersproject/providers';
+import { Wallet } from '@ethersproject/wallet';
 
 async function main(ownerPrivateKey: string, network: EthNetwork) {
   console.log('multi-burn-single-mint main');
@@ -20,15 +20,19 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     // Configure Core SDK Workflow class
     const config = getConfig(network);
     const workflows = new Workflows(config);
-
     // Get signer - as per core-sdk
     const provider = new AlchemyProvider(network, process.env.ALCHEMY_API_KEY);
     const signer = new Wallet(ownerPrivateKey).connect(provider);
     const { starkWallet } = await generateWallets(provider);
+
+    //generate authorisation headers
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const signature = await signRaw(timestamp, signer);
+
     console.log('burnRequestParam');
     const burnRequestParam: UnsignedBurnRequest = {
-      amount: '1',
-      sender: '0xdd8C03c3a9e886De275e003cd3ed2a8E24ca87ca',
+      amount: '0.0001',
+      sender: process.env.WALLET_ADDRESS || '',
       token: {
         type: TokenType.ERC721,
         data: {
@@ -68,11 +72,11 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
       const mintTokenRequestParam: MintsApiMintTokensRequest = {
         mintTokensRequestV2: [
           {
-            auth_signature: 'string',
+            auth_signature: signature,
             contract_address: '0x19e81d345a3bb5194458b2df8ff49960c336b413',
             users: [
               {
-                user: '',
+                user: signer.address,
                 tokens: [
                   {
                     id: '2506',
