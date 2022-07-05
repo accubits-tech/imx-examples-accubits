@@ -29,8 +29,8 @@ const component = '[IMX-CREATE-PROJECT]';
    * Edit your values here
    */
   const params: CreateProjectParams = {
-    name: 'ENTER_PROJECT_NAME_HERE-2',
-    company_name: 'ENTER_COMPANY_NAME_HERE',
+    name: 'test-project-ms',
+    company_name: 'Accubits',
     contact_email: 'contactemail@example.com',
   };
 

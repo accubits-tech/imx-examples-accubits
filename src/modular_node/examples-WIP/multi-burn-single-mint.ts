@@ -31,12 +31,13 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
 
     console.log('burnRequestParam');
     const burnRequestParam: UnsignedBurnRequest = {
-      amount: '0.0001',
+      amount: '1',
       sender: '0xb064ddf8a93ae2867773188eb3c79ea3a22874ff', //process.env.WALLET_ADDRESS || '',
       token: {
+        type:"ERC721",
         data: {
-          tokenId: '20',
-          tokenAddress: '0xf420aa4c2bfbcd0203901dd7f207224f6ea803fd',
+          token_id: '518727510',
+          token_address: '0xf420aa4c2bfbcd0203901dd7f207224f6ea803fd',
         },
       },
     };
