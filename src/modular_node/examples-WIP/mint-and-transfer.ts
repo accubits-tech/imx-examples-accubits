@@ -52,7 +52,7 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
   const adminEthSignature = await signRaw(timestamp, admin);
   const userEthSignature = await signRaw(timestamp, user);
   const adminStarkSignature = serializeSignature(
-    sign(adminStarkWallet.starkKeyPair, 'msg'), // what is to be passes in msg
+    sign(adminStarkWallet.starkKeyPair, 'msg'), // what is to be passed in msg
   );
   const userStarkSignature = serializeSignature(
     sign(userStarkWallet.starkKeyPair, 'msg'),

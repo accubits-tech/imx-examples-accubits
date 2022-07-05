@@ -15,9 +15,9 @@ const PROVIDER_KEY = process.env.PROVIDER_KEY || "";
 const STARK_CONTRACT_ADDRESS = process.env.STARK_CONTRACT_ADDRESS;
 const REGISTRATION_CONTRACT_ADDRESS = process.env.REGISTRATION_CONTRACT_ADDRESS;
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "";
-const BUYER_PRIVATE_KEY = process.env.BUYER_PRIVATE_KEY || "";
-const SELLER_PRIVATE_KEY = process.env.SELLER_PRIVATE_KEY || "";
-const MINTER_PRIVATE_KEY = process.env.MINTER_PRIVATE_KEY || "";
+const BUYER_PRIVATE_KEY = "569fe55834e8f68362961d30396f534104838f784de134541e08b89226b361ba"//process.env.BUYER_PRIVATE_KEY || "";
+const SELLER_PRIVATE_KEY = "8528fe6214e212f92198a7f0e7176ae761a8469d4eb7d8b62170fa80075961fd" //process.env.SELLER_PRIVATE_KEY || "";
+const MINTER_PRIVATE_KEY = "4f7cfd8cc1fae716406910d7de04ded04d9c0d30500ba03e22560eb01898a7c0"//process.env.MINTER_PRIVATE_KEY || "";
 
 const provider = new ethers.providers.InfuraProvider("ropsten", PROVIDER_KEY);
 const IMX_API_ADDRESS = "https://api.ropsten.x.immutable.com/v1";
