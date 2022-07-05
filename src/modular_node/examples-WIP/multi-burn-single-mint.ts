@@ -32,18 +32,17 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     console.log('burnRequestParam');
     const burnRequestParam: UnsignedBurnRequest = {
       amount: '0.0001',
-      sender: process.env.WALLET_ADDRESS || '',
+      sender: '0xb064ddf8a93ae2867773188eb3c79ea3a22874ff', //process.env.WALLET_ADDRESS || '',
       token: {
-        type: TokenType.ERC721,
         data: {
-          tokenId: '381',
-          tokenAddress: '0x19e81d345a3bb5194458b2df8ff49960c336b413',
+          tokenId: '20',
+          tokenAddress: '0xf420aa4c2bfbcd0203901dd7f207224f6ea803fd',
         },
       },
     };
     console.log(burnRequestParam);
     console.log(signer);
-    console.log(starkWallet);
+    //console.log(starkWallet);
 
     const burnResponse = await workflows.burn(
       signer,
@@ -60,7 +59,7 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
       id: burnResponse?.transfer_id?.toString(),
     });
     const getBurnResponseData = getBurnResponse.data || {};
-    //See if the fetched burn is successful, otherwise don't mint
+    // See if the fetched burn is successful, otherwise don't mint
     if (getBurnResponseData.status == 'success') {
       console.log(
         'Burn was successful, tx_id: ',
