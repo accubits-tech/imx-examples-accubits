@@ -21,7 +21,7 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     const config = getConfig(network);
     const workflows = new Workflows(config);
     // Get signer - as per core-sdk
-    const provider = new AlchemyProvider(network, process.env.ALCHEMY_API_KEY);
+    const provider = new AlchemyProvider(network,"DvukuyBzEK-JyP6zp1NVeNVYLJCrzjp_"); // process.env.ALCHEMY_API_KEY
     const signer = new Wallet(ownerPrivateKey).connect(provider);
     const { starkWallet } = await generateWallets(provider);
 
@@ -31,17 +31,18 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
 
     console.log('burnRequestParam');
     const burnRequestParam: UnsignedBurnRequest = {
-      amount: '0.0001',
+      amount: '1',
       sender: '0xb064ddf8a93ae2867773188eb3c79ea3a22874ff', //process.env.WALLET_ADDRESS || '',
       token: {
+        type:"ERC721",
         data: {
-          tokenId: '20',
-          tokenAddress: '0xf420aa4c2bfbcd0203901dd7f207224f6ea803fd',
+          token_id: '518727510',
+          token_address: '0xf420aa4c2bfbcd0203901dd7f207224f6ea803fd',
         },
       },
     };
-    console.log(burnRequestParam);
-    console.log(signer);
+    // console.log(burnRequestParam);
+    // console.log(signer);
     //console.log(starkWallet);
 
     const burnResponse = await workflows.burn(
