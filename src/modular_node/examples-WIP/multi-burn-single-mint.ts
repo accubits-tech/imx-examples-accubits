@@ -14,6 +14,11 @@ import {
 import { AlchemyProvider } from '@ethersproject/providers';
 import { Wallet } from '@ethersproject/wallet';
 
+function random(): number {
+  const min = 1;
+  const max = 1000000000;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 async function main(ownerPrivateKey: string, network: EthNetwork) {
   console.log('multi-burn-single-mint main');
   try {
@@ -23,8 +28,8 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     // Get signer - as per core-sdk
     const provider = new AlchemyProvider(network,"DvukuyBzEK-JyP6zp1NVeNVYLJCrzjp_"); // process.env.ALCHEMY_API_KEY
     const signer = new Wallet(ownerPrivateKey).connect(provider);
-    const { starkWallet } = await generateWallets(provider);
-
+    // generate your own stark wallet
+    const starkWallet = await generateStarkWallet(signer);
     //generate authorisation headers
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const signature = await signRaw(timestamp, signer);
@@ -34,16 +39,16 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
       amount: '1',
       sender: '0xb064ddf8a93ae2867773188eb3c79ea3a22874ff', //process.env.WALLET_ADDRESS || '',
       token: {
-        type:"ERC721",
+        type:TokenType.ERC721,
         data: {
-          token_id: '518727510',
+          token_id: '66',
           token_address: '0xf420aa4c2bfbcd0203901dd7f207224f6ea803fd',
         },
       },
     };
-    // console.log(burnRequestParam);
-    // console.log(signer);
-    //console.log(starkWallet);
+    console.log(burnRequestParam);
+    console.log(signer);
+    console.log(starkWallet.starkKeyPair);
 
     const burnResponse = await workflows.burn(
       signer,
@@ -55,11 +60,14 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     //Give API time to register the burn
     await new Promise(f => setTimeout(f, 3000));
 
-    //Fetch the burn
+    //Fetch the burn 
     const getBurnResponse = await workflows.getBurn({
       id: burnResponse?.transfer_id?.toString(),
     });
+    console.log("getBurnResponse")
+    console.log(getBurnResponse)
     const getBurnResponseData = getBurnResponse.data || {};
+
     // See if the fetched burn is successful, otherwise don't mint
     if (getBurnResponseData.status == 'success') {
       console.log(
@@ -69,40 +77,36 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
 
       //Attempt to mint an asset on the back of the burn
       const mintsApi = new MintsApi(config.api);
-      const mintTokenRequestParam: MintsApiMintTokensRequest = {
-        mintTokensRequestV2: [
+      const mintResponse = await workflows.mint(signer, {
+        contract_address: "0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD",
+        users: [
           {
-            auth_signature: signature,
-            contract_address: '0x19e81d345a3bb5194458b2df8ff49960c336b413',
-            users: [
+            user: signer.address,
+            tokens: [
               {
-                user: signer.address,
-                tokens: [
-                  {
-                    id: '2506',
-                    blueprint: 'none',
-                  },
-                ],
+                id:random().toString(10),
+                blueprint: 'none',
               },
             ],
           },
         ],
-      };
-      const mintResponse = await mintsApi.mintTokens(mintTokenRequestParam);
-      const mintResponseData = mintResponse?.data || {};
+      });
+    console.log('Mint response:');
+    console.log(mintResponse);
       //Give API time to register the new mint
       await new Promise(f => setTimeout(f, 3000));
 
       //Fetch the mint
       const mintFetch = await mintsApi.getMint({
-        id: mintResponseData.results[0].tx_id.toString(),
+        id: mintResponse.results[0].tx_id.toString(),
       });
-      const mintFetchData: Mint = mintFetch?.data || {};
-
+      const mintFetchData: any = mintFetch?.data || {}; //As per data type in core-sdk it should be Mint obj but getting array -To be checked
+      console.log("mintFetchData")
+      console.log(mintFetchData);
       //If the mint is fetched and successful then mint
-      if (mintFetchData.status == 'success') {
+      if (mintFetchData[0].status == 'success') {
         console.log(
-          'Mint was successful, tx_id: ' + mintFetchData.transaction_id,
+          'Mint was successful, tx_id: ' + mintFetchData[0].transaction_id,
         );
       } else {
         console.log('Mint was unsuccessful');
@@ -116,20 +120,7 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     console.log(err);
   }
 }
-// generate your own stark wallet
-const generateWallets = async (provider: AlchemyProvider) => {
-  // L1 credentials
-  const wallet = Wallet.createRandom().connect(provider);
 
-  // L2 credentials
-  // Obtain stark key pair associated with this user
-  const starkWallet = await generateStarkWallet(wallet); // this is sdk helper function
-
-  return {
-    wallet,
-    starkWallet,
-  };
-};
 const argv = yargs(process.argv.slice(2))
   .usage('Usage: -k <PRIVATE_KEY> --network <NETWORK>')
   .options({
