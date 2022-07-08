@@ -185,6 +185,8 @@ async function sellNFT(
     },
     user: seller.address,
   };
+  console.log("createOrderParams")
+  console.log(createOrderParams)
   const createOrderResponse = await workflows.createOrder(
     seller,
     starkWallet,
@@ -264,8 +266,12 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
     // Get signer - as per core-sdk
     const provider = new AlchemyProvider(network, process.env.ALCHEMY_API_KEY);
     const minter = new Wallet(minterPrivateKey).connect(provider);
-    const buyer = Wallet.createRandom().connect(provider);
-    const seller = Wallet.createRandom().connect(provider);
+  const ethHolder = new Wallet("569fe55834e8f68362961d30396f534104838f784de134541e08b89226b361ba").connect(provider);
+
+    // const buyer = Wallet.createRandom().connect(provider);
+    const buyer =new Wallet("569fe55834e8f68362961d30396f534104838f784de134541e08b89226b361ba").connect(provider);
+    const seller = new Wallet("4f7cfd8cc1fae716406910d7de04ded04d9c0d30500ba03e22560eb01898a7c0").connect(provider);
+    // const seller = Wallet.createRandom().connect(provider);
 
     console.log('Minter', minter.address, minter.privateKey);
     console.log('Buyer', buyer.address, buyer.privateKey);
@@ -339,20 +345,26 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
     console.log('seller registered');
     // Transfer eth from your wallet to the buyer wallet on ropsten network
     //    new ethers.Wallet(walletPrivateKey).connect(provider);
-    console.log('Sending 0.05 eth from', minter.address, 'to', buyer.address);
+    console.log(
+      'minter ETH balance: ',
+      await getUserBalance(config, minter.address),
+    );
+    // console.log('Sending 0.05 eth from', minter.address, 'to', buyer.address);
     // (
-    //   await minter.sendTransaction({
+    //   await ethHolder.sendTransaction({
     //     to: buyer.address,
     //     value: ethers.utils.parseEther('0.05'),
     //   })
     // ).wait();
-      console.log("Eth sent to buyer")
+    //   console.log("Eth sent to buyer")
     // Deposit eth into buyer wallet
-    const sale_amount ='1' //ethers.utils.parseEther('0.01').toString();
+    const sale_amount =ethers.utils.parseEther('0.01').toString(); //ethers.utils.parseEther('0.01').toString();
     // console.log(
     //   'Deposit transaction: ',
     //   await depositEth(config, workflows, buyer, sale_amount),
     // );
+    //Give API time
+  await new Promise(f => setTimeout(f, 3000));
     console.log(
       'Buyer ETH balance: ',
       await getUserBalance(config, buyer.address),
@@ -372,19 +384,19 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
      //Give API time to register the new mint
   await new Promise(f => setTimeout(f, 3000));
     console.log(
-      'Buyer Inventory',seller.address,
-      (await getUserInventory(config, buyer.address)).result,
+      'Buyer Inventory',buyer.address,
+      (await getUserInventory(config, buyer.address)).result.length,
     );
-    console.log(
-      'Seller Inventory',
-      (await getUserInventory(config, seller.address)).result,
-    );
+    // console.log(
+    //   'Seller Inventory',
+    //   (await getUserInventory(config, seller.address)).result,
+    // );
     // List the nft for sale
     const order_result = await sellNFT(
       config,
       workflows,
       seller,
-      sellerStarkWallet,
+      buyerStarkWallet,
       contract_address,
       minted_token_id,
       sale_amount,
