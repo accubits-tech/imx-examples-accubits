@@ -1,5 +1,3 @@
-import { ethers } from 'ethers';
-import { ImmutableXClient, ImmutableXWallet, sign } from '@imtbl/imx-sdk';
 import { AlchemyProvider } from '@ethersproject/providers';
 import { Wallet } from '@ethersproject/wallet';
 import {
@@ -15,6 +13,7 @@ import {
   TokenType,
   UsersApi,
   Workflows,
+  sign
 } from '@imtbl/core-sdk';
 import yargs from 'yargs';
 
