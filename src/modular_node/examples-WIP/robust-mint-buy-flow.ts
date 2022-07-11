@@ -1,44 +1,42 @@
-import { ImmutableXClient, sleep } from "@imtbl/imx-sdk";
+import { BigNumber } from '@ethersproject/bignumber';
+import { ethers } from 'ethers';
+import { AlchemyProvider } from '@ethersproject/providers';
+import { Wallet } from '@ethersproject/wallet';
+import { Signer } from '@ethersproject/abstract-signer';
+import dotenv from 'dotenv';
 import {
-  ETHTokenType,
-  ImmutableMethodResults,
-  MintableERC721TokenType,
-  ERC721TokenType,
-} from "@imtbl/imx-sdk";
-import { BigNumber } from "@ethersproject/bignumber";
-import { ethers, Wallet } from "ethers";
-import dotenv from "dotenv";
+  AssetsApi,
+  BalancesApi,
+  Config,
+  CreateTransferResponseV1,
+  EthNetwork,
+  generateStarkWallet,
+  getConfig,
+  StarkWallet,
+  Transfer,
+  TransfersApi,
+  UnsignedTransferRequest,
+  Workflows,
+  TokenType
+} from '@imtbl/core-sdk';
+import yargs from 'yargs';
 
-dotenv.config({ path: "./.env.ropsten" });
+dotenv.config({ path: './.env.ropsten' });
 
-const PROVIDER_KEY = process.env.PROVIDER_KEY || "";
+const PROVIDER_KEY = process.env.PROVIDER_KEY || '';
 const STARK_CONTRACT_ADDRESS = process.env.STARK_CONTRACT_ADDRESS;
 const REGISTRATION_CONTRACT_ADDRESS = process.env.REGISTRATION_CONTRACT_ADDRESS;
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "";
-const BUYER_PRIVATE_KEY = process.env.BUYER_PRIVATE_KEY || "";
-const SELLER_PRIVATE_KEY = process.env.SELLER_PRIVATE_KEY || "";
-const MINTER_PRIVATE_KEY = process.env.MINTER_PRIVATE_KEY || "";
+const CONTRACT_ADDRESS =
+  process.env.CONTRACT_ADDRESS || "";
+const BUYER_PRIVATE_KEY =
+  process.env.BUYER_PRIVATE_KEY || "";
+const SELLER_PRIVATE_KEY =
+  process.env.SELLER_PRIVATE_KEY || "";
+const MINTER_PRIVATE_KEY =
+  process.env.MINTER_PRIVATE_KEY || "";
 
-const provider = new ethers.providers.InfuraProvider("ropsten", PROVIDER_KEY);
-const IMX_API_ADDRESS = "https://api.ropsten.x.immutable.com/v1";
-
-/**
- * Create the Immutable client. In this example we use this client for all
- * interactions. We do not use Link as this sample is not dependant on a
- * browser. For all user interactions please use Link instead.
- * @param wallet Web3 wallet
- * @returns ImmutableXClient
- */
-async function getClient(wallet: Wallet): Promise<ImmutableXClient> {
-  return await ImmutableXClient.build({
-    publicApiUrl: IMX_API_ADDRESS,
-    starkContractAddress: STARK_CONTRACT_ADDRESS,
-    registrationContractAddress: REGISTRATION_CONTRACT_ADDRESS,
-    signer: wallet,
-    gasLimit: "5000000",
-    gasPrice: "20000000000",
-  });
-}
+const provider = new ethers.providers.InfuraProvider('ropsten', PROVIDER_KEY);
+const IMX_API_ADDRESS = 'https://api.ropsten.x.immutable.com/v1';
 
 /**
  * Pseudo restricted random number generated used for the client token id during minting.
@@ -52,74 +50,77 @@ function random() {
 
 /**
  * Obtain the IMX balance of the wallet.
- * @param wallet Web3 wallet registered on IMX
+ * @param user Web3 wallet address registered on IMX
  * @returns Wallet balance in Wei
  */
-async function getBalance(wallet: Wallet): Promise<BigNumber> {
-  const client = await getClient(wallet);
-  const response = await client.getBalance({
-    user: wallet.address.toLowerCase(),
-    tokenAddress: "eth",
+async function getBalance(config: Config, user: string): Promise<string> {
+  const balancesApi = new BalancesApi(config.api);
+  const balanceApiResponse = await balancesApi.getBalance({
+    owner: user,
+    address: 'eth',
   });
-  return response.balance;
+  return balanceApiResponse?.data.balance || '';
 }
 
 /**
  * Buyer pays the seller the nominated amount in Wei. The payment
  * is by way of a transfer of the ETH token type from the buyer
  * to the seller.
- * @param buyer buyers Web3 wallet
- * @param seller sellers Web3 wallet
+ * @param config config instance created using getConfig from core-sdk
+ * @param  workflows Workflows instance from core-sdk
+ * @param  buyer buyers Web3 wallet
+ * @param  sellerAddress sellers Web3 wallet address
  * @param amount amount in Wei
  * @returns Transfer result which for all intents and purposes we ignore in this demo to illustrate
  * how to check if the transfer is successful without a transaction id.
  */
 async function pay(
+  config: Config,
+  workflows: Workflows,
   buyer: Wallet,
+  buyerStarkWallet: StarkWallet,
   sellerAddress: string,
-  amount: string
-): Promise<ImmutableMethodResults.ImmutableTransferResult> {
+  amount: string,
+): Promise<CreateTransferResponseV1> {
   console.log(
-    `Buyer ${buyer.address} is sending ${amount} to seller ${sellerAddress}`
+    `Buyer ${buyer.address} is sending ${amount} to seller ${sellerAddress}`,
   );
-  const client = await getClient(buyer);
-  // We use the SDK transfer here in-place of link.transfer so the
-  // code can run in Node without a browser. Please linl.transfer
-  // to securely transfer eth between a buyer and seller where the
-  // buyer should sign the transaction securely.
-  return client.transfer({
-    sender: buyer.address.toLowerCase(),
+  const transferReqParm: UnsignedTransferRequest = {
+    amount: amount,
+    receiver: sellerAddress,
+    sender: buyer.address,
     token: {
-      type: ETHTokenType.ETH,
+      type: TokenType.ETH,
       data: {
         decimals: 18,
       },
     },
-    quantity: BigNumber.from(amount),
-    receiver: sellerAddress.toLowerCase(),
-  });
+  };
+  return await workflows.transfer(buyer, buyerStarkWallet, transferReqParm);
 }
 
 /**
  * Return the most recent transfer result between buyer and seller.
- * @param buyer buyers Web3 wallet
+ * @param config config instance created using getConfig from core-sdk
+ * @param buyerAddress buyers Web3 wallet address
  * @param seller sellers Web3 wallet
  * @returns Most recent transfer between buyer and seller.
  */
 async function getMostRecentTransfer(
+  config:Config,
   buyerAddress: string,
-  seller: Wallet
-): Promise<ImmutableMethodResults.ImmutableTransfer | null> {
-  const client = await getClient(seller);
-  const transfers = await client.getTransfers({
+  seller: Wallet,
+): Promise< any| null> {
+  const transfersApi= new TransfersApi(config.api)
+  const transfers = await transfersApi.listTransfers({
     user: buyerAddress.toLowerCase(),
     receiver: seller.address.toLowerCase(),
-    page_size: 1,
-  });
-  for (let transfer of transfers.result) {
-    return transfer;
-  }
-  return null;
+    pageSize: 1,
+  })
+  return transfers?.data?.result[0]||null
+  // for (let transfer of transfers.result) {
+  //   return transfer;
+  // }
 }
 
 /**
@@ -128,19 +129,20 @@ async function getMostRecentTransfer(
  * to ensure that the transfer took place in a particular time window. This is used in place of the
  * Transaction id which isn't available when using link.transfer.
  * @param transfer transfer transaction
- * @param buyer buyers Web3 wallet
- * @param seller sellers Web3 wallet
+ * @param buyerAddress buyer's Web3 wallet address
+ * @param seller seller's Web3 wallet address
  * @param amount amount paid in Wei
  * @param variance time variance in seconds
  * @returns true if the payment is the expected one else false.
  */
 function validatePayment(
-  transfer: ImmutableMethodResults.ImmutableTransfer,
+  transfer: any,
   buyerAddress: string,
   sellerAddress: string,
   amount: string,
-  variance: Number
+  variance: Number,
 ): boolean {
+  
   function timeDiff(transferDate: Date): Number {
     const now = new Date();
     return (now.getTime() - transferDate.getTime()) / 1000;
@@ -148,155 +150,193 @@ function validatePayment(
   const foundPossibleMatchingPayment =
     transfer.user.toLowerCase() === buyerAddress.toLowerCase() &&
     transfer.receiver.toLowerCase() === sellerAddress.toLowerCase() &&
-    transfer.token.type === ETHTokenType.ETH &&
+    transfer.token.type === TokenType.ETH &&
     transfer.token.data.quantity.toString() === amount;
   return (
-    foundPossibleMatchingPayment && timeDiff(transfer.timestamp) < variance
+    foundPossibleMatchingPayment && timeDiff(new Date (transfer.timestamp||0)) < variance
   );
 }
 
 /**
  * Transfers an ERC721 token from a seller to a buyer.
- * @param buyer buyers Web3 wallet
- * @param seller sellers Web3 wallet
+ * @param  workflows Workflows instance from core-sdk
+ * @param buyerAddress buyer's Web3 wallet address
+ * @param seller seller's Web3 wallet
+ * @param sellerStarkWallet seller's starkWallet
  * @param tokenId client token id of minted token
  * @returns result of transfer.
  */
 async function transferToken(
+ workflows: Workflows,
   buyerAddress: string,
   seller: Wallet,
-  tokenId: string
-): Promise<ImmutableMethodResults.ImmutableTransferResult> {
+  sellerStarkWallet: StarkWallet,
+  tokenId: string,
+): Promise<CreateTransferResponseV1> {
   console.log(
-    `Seller ${seller.address} is sending token ${tokenId} to buyer ${buyerAddress}`
+    `Seller ${seller.address} is sending token ${tokenId} to buyer ${buyerAddress}`,
   );
-  const client = await getClient(seller);
-  return client.transfer({
-    sender: seller.address.toLowerCase(),
+  const transferReqParm: UnsignedTransferRequest = {
+    amount: BigNumber.from('1').toString(),
+    receiver: buyerAddress.toLowerCase(),
+    sender: seller.address,
     token: {
-      type: ERC721TokenType.ERC721,
+      type: TokenType.ERC721,
       data: {
-        tokenId: tokenId,
-        tokenAddress: CONTRACT_ADDRESS,
+        token_id: tokenId,
+        token_address: CONTRACT_ADDRESS,
       },
     },
-    quantity: BigNumber.from("1"),
-    receiver: buyerAddress.toLowerCase(),
-  });
+  };
+  return await workflows.transfer(seller, sellerStarkWallet, transferReqParm);
 }
 
 /**
- * Returns the buyers inventory.
- * @param buyer buyers Web3 wallet
+ * Returns the user's inventory.
+ * @param user user Web3 wallet address
  * @returns buyers inventory.
  */
-async function getUserInventory(buyer: Wallet) {
-  const client = await getClient(buyer);
-  return client.getAssets({
-    user: buyer.address.toLowerCase(),
+
+async function getUserInventory(config: Config, user: string) {
+  const assetsApi = new AssetsApi(config.api);
+  const listAssetsResponse = await assetsApi.listAssets({
+    user: user,
   });
+  return listAssetsResponse.data;
 }
 
 /**
  * Mint a token to the seller wallet. This is a pre-purchase minting flow.
+ * @param  workflows Workflows instance from core-sdk
+ * @param  minter Signer object of minter
+ * @param  recipient recipient's Web3 wallet address
+ * @param  contractAddress address of contract registered with immutableX
  */
-async function mint(sellerAddress: string): Promise<string> {
-  const minter = new Wallet(MINTER_PRIVATE_KEY).connect(provider);
-  const client = await getClient(minter);
-  const token = {
-    type: MintableERC721TokenType.MINTABLE_ERC721,
-    data: {
-      id: random().toString(),
-      blueprint: "change_me",
-      tokenAddress: CONTRACT_ADDRESS,
-    },
-  };
-  const result = await client.mint({
-    mints: [
+async function mint(
+  workflows: Workflows,
+  minter: Signer,
+  recipient: string,
+  contractAddress: string,
+): Promise<string> {
+  const mintResponse = await workflows.mint(minter, {
+    contract_address: contractAddress,
+    users: [
       {
-        etherKey: sellerAddress.toLowerCase(),
-        tokens: [token],
-        nonce: random().toString(),
-        authSignature: "", // leave blank as this is automatically populated by the lib
+        user: recipient,
+        tokens: [
+          {
+            id: random().toString(10),
+            blueprint: 'none',
+          },
+        ],
       },
     ],
   });
-  return result.results[0].token_id;
+
+  return mintResponse.results[0].token_id;
 }
 
 /**
  * Displays the balances of the 2 wallets.
+ * @param config config instance created using getConfig from core-sdk
  * @param buyer buyer wallet
- * @param seller seler wallet
+ * @param seller seller wallet
  */
 async function showWalletBalances(
+  config: Config,
   buyer: Wallet,
-  seller: Wallet
+  seller: Wallet,
 ): Promise<void> {
-  let sellerBalance = await getBalance(seller);
-  let buyerBalance = await getBalance(buyer);
+  let sellerBalance = await getBalance(config, seller.address);
+  let buyerBalance = await getBalance(config, buyer.address);
   console.log(
     `Seller Balance ${ethers.utils.formatEther(
-      sellerBalance
-    )}, and buyer balance ${ethers.utils.formatEther(buyerBalance)}`
+      sellerBalance,
+    )}, and buyer balance ${ethers.utils.formatEther(buyerBalance)}`,
   );
 }
 
-async function main(): Promise<void> {
+async function main(
+  minterPrivateKey: string,
+  network: EthNetwork,
+): Promise<void> {
+  // Configure Core SDK Workflow class
+  const config = getConfig(network);
+  const workflows = new Workflows(config);
+  // Get signer - as per core-sdk
+  const provider = new AlchemyProvider(network, process.env.ALCHEMY_API_KEY);
+  const minter = new Wallet(minterPrivateKey).connect(provider);
   const seller = new Wallet(SELLER_PRIVATE_KEY).connect(provider);
   const buyer = new Wallet(BUYER_PRIVATE_KEY).connect(provider);
-  const price = "1000000000000";
+  const price = '1000000000000';
 
+  const buyerStarkWallet = await generateStarkWallet(buyer);
+  const sellerStarkWallet = await generateStarkWallet(seller);
   // 1. Start by showing the buyer and sellers IMX wallet balances.
-  await showWalletBalances(buyer, seller);
+  await showWalletBalances(config, buyer, seller);
 
   // 2. This example uses a pre-purchase mint flow. So let's mint
   // a token to the seller.
-  const tokenId = await mint(seller.address);
+  const tokenId = await mint(
+    workflows,
+    minter,
+    seller.address,
+    CONTRACT_ADDRESS,
+  );
   console.log(`Token ${tokenId} minted to seller. Now let's pay for it.`);
-  await sleep(10000);
-
+  console.log("wait ")
+  await new Promise(f => setTimeout(f, 3000));
+  console.log("wait complete")
   // 3. Buyer pays a nominated amount. Up to the implementer to keep
   // track of the respective token.
-  await pay(buyer, seller.address, price);
+  await pay(config, workflows, buyer, buyerStarkWallet, seller.address, price);
   console.log("Payment made. Now let's validate the payment.");
-  await sleep(5000);
-
+  await new Promise(f => setTimeout(f, 3000));
   // 4. Check to see if the seller received the money
-  const mostRecentTransfer = await getMostRecentTransfer(buyer.address, seller);
+  const mostRecentTransfer = await getMostRecentTransfer(config, buyer.address, seller);
   if (mostRecentTransfer) {
     const paymentReceived = validatePayment(
       mostRecentTransfer,
       buyer.address,
       seller.address,
       price,
-      10
+      10,
     );
     console.log(`Was payment received: ${paymentReceived}`);
-    await sleep(5000);
+    await new Promise(f => setTimeout(f, 3000));
     if (paymentReceived) {
       // 5. Payment was received, so let's transfer the token to the buyer
-      await transferToken(buyer.address, seller, tokenId);
+      await transferToken(workflows,buyer.address, seller, sellerStarkWallet,tokenId);
       console.log("Token transfered. Now let's check the user inventory.");
-      await sleep(5000);
+      await new Promise(f => setTimeout(f, 5000));
 
       // 6. Check the buyers inventory to see if they received the token
-      const buyerInventory = await getUserInventory(buyer);
+      const buyerInventory = await getUserInventory(config,buyer.address);
       for (let item of buyerInventory.result) {
         if ((item as any).token_id === tokenId) {
-          console.log("Buyer received item");
+          console.log('Buyer received item');
         }
       }
     }
   } else {
-    throw "Transfer failed";
+    throw 'Transfer failed';
   }
 
   // 7. Finally lets show the balances again, and we should see the respective amount
   // moved from the buyers wallet to the sellers.
-  await showWalletBalances(buyer, seller);
+  await showWalletBalances(config, buyer, seller);
 }
-
-main().catch((err) => {
+const argv = yargs(process.argv.slice(2))
+  .usage('Usage: -k <PRIVATE_KEY> --network <NETWORK>')
+  .options({
+    k: { describe: 'wallet private key', type: 'string', demandOption: true },
+    network: {
+      describe: 'network. ropsten or mainnet',
+      type: 'string',
+      demandOption: true,
+    },
+  })
+  .parseSync();
+main(argv.k, argv.network as EthNetwork).catch(err => {
   console.error(err);
 });

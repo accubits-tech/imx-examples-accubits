@@ -12,8 +12,14 @@ import {
   MintsApiMintTokensRequest,
   Mint,
   CollectionsApiCreateCollectionRequest,
+  Workflows,
 } from '@imtbl/core-sdk';
 
+function random(): number {
+  const min = 1;
+  const max = 1000000000;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 async function main(ownerPrivateKey: string, network: EthNetwork) {
   //Compile the contract
   //compileContract();
@@ -49,59 +55,54 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     iMXSignature: signature,
     iMXTimestamp: timestamp,
   });
-  const project = createProjectRes?.data || {};
-  console.log('Created project with id:', project.id);
-  console.log("wallet address", process.env.WALLET_ADDRESS)
-  //Create collection with the deployed contract and project id
-  const collectionsApi = new CollectionsApi(config.api);
-  const createCollectionParams:CollectionsApiCreateCollectionRequest={
-    iMXSignature: signature,
-    iMXTimestamp: timestamp,
-    createCollectionRequest: {
-      'contract_address': "0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD",
-      'name': 'test collection',
-      'owner_public_key':"0xb064ddf8a93ae2867773188eb3c79ea3a22874ff",
-  }
-}
-  const createCollectionRes = await collectionsApi.createCollection(createCollectionParams);
-  const collection = createCollectionRes?.data || {};
-  console.log('Created collection with address:', collection.address);
+const project = createProjectRes?.data || {};
+console.log('Created project with id:', project.id);
+//Create collection with the deployed contract and project id
+//   const collectionsApi = new CollectionsApi(config.api);
+//   const createCollectionParams:CollectionsApiCreateCollectionRequest={
+//     iMXSignature: signature,
+//     iMXTimestamp: timestamp,
+//     createCollectionRequest: {
+//       'contract_address': "0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD",
+//       'name': 'test collection',
+//       'owner_public_key':"0xb064ddf8a93ae2867773188eb3c79ea3a22874ff",
+//   }
+// }
+//   const createCollectionRes = await collectionsApi.createCollection(createCollectionParams);
+//   const collection = createCollectionRes?.data || {};
+//   console.log('Created collection with address:', collection.address);
 
-  //Mint an asset
-  const mintsApi = new MintsApi(config.api);
-  const mintTokenRequestParam: MintsApiMintTokensRequest = {
-    mintTokensRequestV2: [
-      {
-        auth_signature: signature,
-        contract_address: collection.address,
-        users: [
-          {
-            user: await signer.address,
-            tokens: [
-              {
-                id: '1',
-                blueprint: 'test blueprint',
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  };
-  const mintResponse = await mintsApi.mintTokens(mintTokenRequestParam);
-  const mintResponseData = mintResponse?.data || {};
+ 
+
+  const workflows = new Workflows(config);
+  const mintResponse = await workflows.mint(signer, {
+      contract_address: "0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD",
+      users: [
+        {
+          user: signer.address,
+          tokens: [
+            {
+              id: random().toString(10),
+              blueprint: 'test blueprint',
+            },
+          ],
+        },
+      ],
+    });
   console.log('Mint response:');
-  console.log(mintResponseData.results);
+  console.log(mintResponse);
 
   //Give API time to register the new mint
   await new Promise(f => setTimeout(f, 3000));
 
   //Fetch mint
+  const mintsApi = new MintsApi(config.api);
+  console.log("fetching mint")
   const mintFetch = await mintsApi.getMint({
-    id: mintResponseData.results[0].tx_id.toString(),
+    id: mintResponse.results[0].tx_id.toString(),
   });
   const mintFetchData: Mint = mintFetch?.data || {};
-  console.log(mintFetchData);
+  console.log(JSON.stringify(mintFetchData));
 }
 
 const argv = yargs(process.argv.slice(2))

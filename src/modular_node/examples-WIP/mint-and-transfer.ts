@@ -1,13 +1,10 @@
 import { ethers } from 'ethers';
 import { ImmutableXClient, ImmutableXWallet, sign } from '@imtbl/imx-sdk';
-// import {
-//   ERC721TokenType,
-//   ImmutableMethodResults,
-//   MintableERC721TokenType,
-// } from '@imtbl/imx-sdk';
 import { AlchemyProvider } from '@ethersproject/providers';
 import { Wallet } from '@ethersproject/wallet';
 import {
+  AssetsApi,
+  Config,
   EthNetwork,
   generateStarkWallet,
   getConfig,
@@ -27,12 +24,13 @@ function random(): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-async function getUserInventory(client: ImmutableXClient, user: string) {
-  return client.getAssets({
+async function getUserInventory(config: Config, user: string) {
+  const assetsApi = new AssetsApi(config.api);
+  const listAssetsResponse = await assetsApi.listAssets({
     user: user,
   });
+  return listAssetsResponse.data;
 }
-
 async function main(minterPrivateKey: string, network: EthNetwork) {
   // Get signer - as per core-sdk
   const provider = new AlchemyProvider(network, process.env.ALCHEMY_API_KEY);
@@ -48,112 +46,116 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
   console.log('minterStarkWallet');
   //crete signatures
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const minterEthSignature = await signRaw(timestamp, minter);
-  const adminEthSignature = await signRaw(timestamp, admin);
-  const userEthSignature = await signRaw(timestamp, user);
-  const adminStarkSignature = serializeSignature(
-    sign(adminStarkWallet.starkKeyPair, 'msg'), // what is to be passes in msg
-  );
-  const userStarkSignature = serializeSignature(
-    sign(userStarkWallet.starkKeyPair, 'msg'),
-  );
+  // const minterEthSignature = await signRaw(timestamp, minter);
+ 
 
   const config = getConfig(network);
   const usersApi = new UsersApi(config.api);
-  await usersApi.registerUser({
+  // Get signable details for offchain registration
+  const adminSignableResult = await usersApi.getSignableRegistrationOffchain({
+    getSignableRegistrationRequest: {
+      ether_key: admin.address,
+      stark_key: adminStarkWallet.starkPublicKey,
+    },
+  });
+  const userSignableResult = await usersApi.getSignableRegistrationOffchain({
+    getSignableRegistrationRequest: {
+      ether_key: user.address,
+      stark_key: userStarkWallet.starkPublicKey,
+    },
+  });
+  const { signable_message: adminSignableMessage, payload_hash: adminPayloadHash } =
+  adminSignableResult.data;
+  const { signable_message: userSignableMessage, payload_hash: userPayloadHash } =
+  userSignableResult.data;
+  // Sign message with L1 credentials
+  const adminEthSignature = await signRaw(adminSignableMessage, admin);
+  const userEthSignature = await signRaw(userSignableMessage, user);
+
+  // Sign hash with L2 credentials
+  const adminStarkSignature = serializeSignature(
+    sign(adminStarkWallet.starkKeyPair, adminPayloadHash),
+  );
+  const userStarkSignature = serializeSignature(
+    sign(userStarkWallet.starkKeyPair, userPayloadHash),
+  );
+  // Send request for user registratin offchain
+  const adminRegisterResponse = await usersApi.registerUser({
     registerUserRequest: {
       eth_signature: adminEthSignature,
       ether_key: admin.address,
-      stark_key: adminStarkWallet.starkPublicKey,
       stark_signature: adminStarkSignature,
+      stark_key: adminStarkWallet.starkPublicKey,
     },
   });
-  console.log('admin registered');
-  await usersApi.registerUser({
+  console.log("admin registered")
+  const userRegisterResponse = await usersApi.registerUser({
     registerUserRequest: {
       eth_signature: userEthSignature,
       ether_key: user.address,
-      stark_key: userStarkWallet.starkPublicKey,
       stark_signature: userStarkSignature,
+      stark_key: userStarkWallet.starkPublicKey,
     },
   });
+  console.log("user registered")
 
   // Mint the token to the "user"
   const contract_address = '0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD'; //<DA_CONTRACT_ADDRESS_CHANGE_ME>- Contract registered by Immutable
   const workflows = new Workflows(config);
-
-  const mintsApi = new MintsApi(config.api);
-  const mintTokenRequestParam: MintsApiMintTokensRequest = {
-    mintTokensRequestV2: [
-      {
-        auth_signature: minterEthSignature,
-        contract_address: contract_address,
-        users: [
-          {
-            user: await user.address,
-            tokens: [
-              {
-                id: '1',
-                blueprint: 'test blueprint',
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  };
-  const mintResponse = await mintsApi.mintTokens(mintTokenRequestParam);
-  const mintResponseData = mintResponse?.data || {};
   //mint using workflow
-  //   const mintResponse = await workflows.mint(minter, {
-  //     contract_address: contract_address,
-  //     users: [
-  //       {
-  //         user: user.address,
-  //         tokens: [
-  //           {
-  //             id: '1',
-  //             blueprint: 'test blueprint',
-  //           },
-  //         ],
-  //       },
-  //     ],
-  //   });
-  const mintedTokenId = mintResponseData.results[0].token_id;
-  const mintedTokenAddress = mintResponseData.results[0].contract_address;
+    const mintResponse = await workflows.mint(minter, {
+      contract_address: contract_address,
+      users: [
+        {
+          user: user.address,
+          tokens: [
+            {
+              id: random().toString(10),
+              blueprint: 'test blueprint',
+            },
+          ],
+        },
+      ],
+    });
+  const mintedTokenId = mintResponse.results[0].token_id;
+  const mintedTokenAddress = mintResponse.results[0].contract_address;
   console.log(`Token minted: ${mintedTokenId}`);
-  //check later if req
-  //   console.log(
-  //     'Admin Inventory',
-  //     await getUserInventory(adminClient, admin.address),
-  //   );
-  //   console.log(
-  //     'User Inventory',
-  //     await getUserInventory(userClient, user.address),
-  //   );
+  //Give API time to register the new mint
+  await new Promise(f => setTimeout(f, 3000));
+    console.log(
+      'Admin Inventory',
+      await getUserInventory(config, admin.address),
+    );
+    console.log(
+      'User Inventory',
+      await getUserInventory(config, user.address),
+    );
 
   // Transfer the token to the administrator
-  const transferResponse = await workflows.transfer(minter, minterStarkWallet, {
-    amount: '0.1',
+  console.log("sending transfer")
+  const transferResponse = await workflows.transfer(user, userStarkWallet, {
+    amount: '1',
     receiver: admin.address,
     sender: user.address,
     token: {
       type: TokenType.ERC721,
       data: {
-        tokenId: mintedTokenId,
-        tokenAddress: mintedTokenAddress,
+        token_id: mintedTokenId,
+        token_address: mintedTokenAddress,
       },
     },
   });
   console.log(`Transfer Complete`);
-  //   console.log(
-  //     'Admin Inventory',
-  //     await getUserInventory(adminClient, admin.address),
-  //   );
-  //   console.log(
-  //     'User Inventory',
-  //     await getUserInventory(userClient, user.address),
-  //   );
+  //Give API time to transfer the asset
+  await new Promise(f => setTimeout(f, 3000));
+    console.log(
+      'Admin Inventory',
+      await getUserInventory(config, admin.address),
+    );
+    console.log(
+      'User Inventory',
+      await getUserInventory(config, user.address),
+    );
 }
 const argv = yargs(process.argv.slice(2))
   .usage('Usage: -k <PRIVATE_KEY> --network <NETWORK>')

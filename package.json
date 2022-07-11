@@ -66,8 +66,10 @@
     "@ethersproject/solidity": "^5.0.5",
     "@ethersproject/strings": "^5.0.5",
     "@ethersproject/wallet": "^5.0.7",
+    "@imtbl/core-sdk": "^0.3.0",
     "@imtbl/imlogging": "^1.0.33",
     "@imtbl/imx-sdk": "1.20.1",
+    "@nomiclabs/hardhat-ethers": "^2.0.6",
     "@typescript-eslint/eslint-plugin": "^4.29.2",
     "@typescript-eslint/parser": "^4.28.0",
     "axios": "^0.21.2",
@@ -98,7 +100,8 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/yargs": "^17.0.10"
+    "@types/yargs": "^17.0.10",
+    "hardhat": "^2.9.9"
   },
   "overrides": {
     "merkle-particia-tree": {

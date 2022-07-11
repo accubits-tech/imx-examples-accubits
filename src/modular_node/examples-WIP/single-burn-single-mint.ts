@@ -7,14 +7,16 @@ import yargs from 'yargs';
 async function main(ownerPrivateKey:string, network:string) {
     try {
         //Burn the asset
+        console.log("burnNFT")
         const burnresponse = await burnNFT(ownerPrivateKey, '381', '0x19e81d345a3bb5194458b2df8ff49960c336b413', network);
-
+        console.log(burnresponse)
         //Give API time to register the burn
         await new Promise(f => setTimeout(f, 3000));
 
         //Fetch the burn
+        console.log("burnNFT")
         const getburnresponse = await getBurn(burnresponse.transfer_id, network);
-
+        console.log(getburnresponse)
         //See if the fetched burn is successful, otherwise don't mint
         if(getburnresponse.status == 'success') {
             console.log('Burn was successful, tx_id: ', getburnresponse.transaction_id)
@@ -26,7 +28,10 @@ async function main(ownerPrivateKey:string, network:string) {
             await new Promise(f => setTimeout(f, 3000));
 
             //Fetch the mint
+             console.log("mintfetch")
+
             const mintfetch = await getMint(mintresponse.results[0].tx_id)
+            console.log(mintfetch)
 
             //If the mint is fetched and successful then mint
             if(mintfetch[0].status ==  'success') {
