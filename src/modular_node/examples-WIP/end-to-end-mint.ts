@@ -58,19 +58,20 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
 const project = createProjectRes?.data || {};
 console.log('Created project with id:', project.id);
 //Create collection with the deployed contract and project id
-//   const collectionsApi = new CollectionsApi(config.api);
-//   const createCollectionParams:CollectionsApiCreateCollectionRequest={
-//     iMXSignature: signature,
-//     iMXTimestamp: timestamp,
-//     createCollectionRequest: {
-//       'contract_address': "0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD",
-//       'name': 'test collection',
-//       'owner_public_key':"0xb064ddf8a93ae2867773188eb3c79ea3a22874ff",
-//   }
-// }
-//   const createCollectionRes = await collectionsApi.createCollection(createCollectionParams);
-//   const collection = createCollectionRes?.data || {};
-//   console.log('Created collection with address:', collection.address);
+  const collectionsApi = new CollectionsApi(config.api);
+  const createCollectionParams:CollectionsApiCreateCollectionRequest={
+    iMXSignature: signature,
+    iMXTimestamp: timestamp,
+    createCollectionRequest: {
+      'contract_address': "0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD",
+      'name': 'test collection',
+      'owner_public_key':"0xb064ddf8a93ae2867773188eb3c79ea3a22874ff",
+      'project_id':project.id
+  }
+}
+  const createCollectionRes = await collectionsApi.createCollection(createCollectionParams);
+  const collection = createCollectionRes?.data || {};
+  console.log('Created collection with address:', collection.address);
 
  
 
