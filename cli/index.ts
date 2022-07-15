@@ -181,4 +181,4 @@ trades
 //   .action((options: any) => {
 //     tradesCreate(options.privateKey, options.alchemyApiKey, options.orderId);
 //   });
-// program.parse();
+program.parse();
