@@ -8,6 +8,7 @@ import addMetaDataSchema from './src/add-metadata-schema';
 import mintsCreate from './src/mints-create';
 import ordersGet from './src/orders-get';
 import tradesGet from './src/trades-get';
+import tradeCreate from './src/trades-create'
 program.version('1.0.0').name('imx');
 /*user commands*/
 const users = program.command('users');
@@ -168,12 +169,17 @@ trades
   .action((options: any) => {
     tradesGet(options.network, options.privateKey, options.id);
   });
-// trades
-//   .command("create")
-//   .option("--privateKey <string>", "private key for wallet")
-//   .option("--alchemyApiKey <string>", "alchemy api key")
-//   .option("--orderId <string>", "id of order")
-//   .action((options: any) => {
-//     tradesCreate(options.privateKey, options.alchemyApiKey, options.orderId);
-//   });
+trades
+  .command("create")
+  .option(
+    '-n, --network <string>',
+    'network to connect',
+    process.env.ETH_NETWORK,
+  )
+  .requiredOption('-k, --privateKey <string>', 'private key for wallet')
+  .requiredOption('-a, --alchemyApiKey <string>', 'alchemy api key')
+  .requiredOption("-o, --orderId <string>", "id of order")
+  .action((options: any) => {
+    tradeCreate(options.network,options.privateKey, options.alchemyApiKey, options.orderId);
+  });
 program.parse();

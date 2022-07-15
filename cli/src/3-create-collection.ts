@@ -36,7 +36,6 @@ export default async (
       iMXSignature: signature,
       iMXTimestamp: timestamp,
     };
-    console.log(createCollectionParams);
     const createCollectionRes = await collectionsApi.createCollection(
       createCollectionParams,
     );
