@@ -18,7 +18,6 @@ export default async (
   filterable: boolean,
 ): Promise<void> => {
   try {
-    console.log('add meta data2', privateKey, alchemyApiKey, network);
     const config = getConfig(network);
     const provider = new AlchemyProvider(network, alchemyApiKey);
     const user = new Wallet(privateKey).connect(provider);

@@ -5,12 +5,12 @@ const getOrdersList = async (ordersApi, cursor?: string) => {
   const getOrdersRes = await ordersApi.listOrders(getOrderParam);
   const orderListData = getOrdersRes?.data || {};
   allOrders = allOrders.concat(orderListData.result);
-  console.log(
-    'len',
-    allOrders.length,
-    orderListData.result.length,
-    orderListData.remaining,
-  );
+  // console.log(
+  //   'len',
+  //   allOrders.length,
+  //   orderListData.result.length,
+  //   orderListData.remaining,
+  // );
   if (orderListData.remaining) {
     await getOrdersList(ordersApi, orderListData.cursor);
   } else console.log('returning', allOrders.length);
@@ -21,7 +21,6 @@ export default async (
   privateKey: string,
   id: string,
 ): Promise<void> => {
-  console.log('orders-get', privateKey, id);
   try {
     const config = getConfig(network);
     const ordersApi = new OrdersApi(config.api);

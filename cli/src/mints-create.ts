@@ -15,14 +15,6 @@ export default async (
   blueprint: string,
 ): Promise<void> => {
   try {
-    console.log(
-      'mints create',
-      network,
-      privateKey,
-      alchemyApiKey,
-      contractAddress,
-      blueprint,
-    );
     const config = getConfig(network);
     const provider = new AlchemyProvider(network, '');
     const signer = new Wallet(privateKey).connect(provider);

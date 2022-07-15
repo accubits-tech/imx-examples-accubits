@@ -6,34 +6,28 @@ import {
   Workflows,
   GetSignableTradeRequest,
   generateStarkWallet,
+  BaseSigner,
 } from '@imtbl/core-sdk';
 
 export default async (
+  network: EthNetwork,
   privateKey: string,
   alchemyApiKey: string,
   orderId: number,
 ): Promise<void> => {
   try {
-    const ETH_NETWORK = process.env.ETH_NETWORK || 'ropsten';
-    console.log(
-      'trades create',
-      privateKey,
-      alchemyApiKey,
-      orderId,
-      ETH_NETWORK,
-    );
-    const config = getConfig(ETH_NETWORK as EthNetwork);
-    const provider = new AlchemyProvider(ETH_NETWORK, '');
+    const config = getConfig(network);
+    const provider = new AlchemyProvider(network, alchemyApiKey);
     const signer = new Wallet(privateKey).connect(provider);
     const starkWallet = await generateStarkWallet(signer);
     const workflows = new Workflows(config);
     const createTradeParams: GetSignableTradeRequest = {
       user: signer.address,
-      order_id: orderId,
+      order_id: +orderId,
     };
-    const tradesResponse = await workflows.createTrade(
+    const tradesResponse = await workflows.createTradeWithSigner(
       signer,
-      starkWallet,
+      new BaseSigner(starkWallet.starkKeyPair),
       createTradeParams,
     );
     console.log('Trade completed:');
