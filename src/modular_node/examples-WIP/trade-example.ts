@@ -50,22 +50,11 @@ import {
   StarkWallet,
   GetSignableOrderRequest,
   GetSignableTradeRequest,
+  BaseSigner,
 } from '@imtbl/core-sdk';
 import { AlchemyProvider } from '@ethersproject/providers';
 import { Wallet } from '@ethersproject/wallet';
 import { Signer } from '@ethersproject/abstract-signer';
-
-/**
- * Registers a user on Immutable X
- */
-// async function registerUser(client: ImmutableXClient, wallet: ethers.Wallet)
-//     : Promise<string> {
-//     const starkKey = await new ImmutableXWallet(wallet).controller.account('starkex', 'immutablex', '1');
-//     return client.register({
-//         etherKey: wallet.address,
-//         starkPublicKey: starkKey,
-//     });
-// }
 
 /**
  * Mint a token to the given user.
@@ -91,26 +80,6 @@ async function mint(
       },
     ],
   });
-
-  //   const result = await client.mint({
-  //     mints: [
-  //       {
-  //         etherKey: recipient.toLowerCase(),
-  //         tokens: [
-  //           {
-  //             type: MintableERC721TokenType.MINTABLE_ERC721,
-  //             data: {
-  //               id: random().toString(10),
-  //               blueprint: '100,100,10',
-  //               tokenAddress: token_address.toLowerCase(),
-  //             },
-  //           },
-  //         ],
-  //         nonce: random().toString(10),
-  //         authSignature: '',
-  //       },
-  //     ],
-  //   });
 
   return mintResponse.results[0].token_id;
 }
@@ -150,8 +119,6 @@ async function depositEth(
   };
 
   const depositResponse = await workflows.deposit(user, token);
-  console.log('depositResponse');
-  console.log(depositResponse);
   return depositResponse;
 }
 
@@ -169,7 +136,7 @@ async function sellNFT(
 ) {
   const createOrderParams: GetSignableOrderRequest = {
     amount_buy: ethers.BigNumber.from(sale_amount).toString(),
-    amount_sell: ethers.BigNumber.from('1').toString() ,
+    amount_sell: ethers.BigNumber.from('1').toString(),
     token_buy: {
       type: ETHTokenType.ETH,
       data: {
@@ -185,34 +152,11 @@ async function sellNFT(
     },
     user: seller.address,
   };
-  console.log("createOrderParams")
-  console.log(createOrderParams)
   const createOrderResponse = await workflows.createOrder(
     seller,
     starkWallet,
     createOrderParams,
   );
-
-  // const params: ImmutableMethodParams.ImmutableGetSignableOrderParamsTS = {
-  //   user: user,
-  //   tokenSell: {
-  //     type: ERC721TokenType.ERC721,
-  //     data: {
-  //       tokenAddress: contract_address,
-  //       tokenId: token_id,
-  //     },
-  //   },
-  //   amountSell: ethers.BigNumber.from('1'),
-  //   tokenBuy: {
-  //     type: ETHTokenType.ETH,
-  //     data: {
-  //       decimals: 18,
-  //     },
-  //   },
-  //   amountBuy: ethers.BigNumber.from(sale_amount),
-  // };
-  console.log('createOrderResponse');
-  console.log(createOrderResponse);
 
   return createOrderResponse;
 }
@@ -231,30 +175,11 @@ async function buyNFT(
     user: buyer.address,
     order_id: order_id,
   };
-  const createTradeResponse = await workflows.createTrade(
+  const createTradeResponse = await workflows.createTradeWithSigner(
     buyer,
-    starkWallet,
+    new BaseSigner(starkWallet.starkKeyPair),
     createTradeParams,
   );
-  // const params: ImmutableMethodParams.ImmutableGetSignableTradeParamsTS = {
-  //   orderId: order_id,
-  //   user: user,
-  //   tokenBuy: {
-  //     type: ERC721TokenType.ERC721,
-  //     data: {
-  //       tokenAddress: contract_address,
-  //       tokenId: token_id,
-  //     },
-  //   },
-  //   amountBuy: ethers.BigNumber.from('1'),
-  //   tokenSell: {
-  //     type: ETHTokenType.ETH,
-  //     data: {
-  //       decimals: 18,
-  //     },
-  //   },
-  //   amountSell: ethers.BigNumber.from('10000000000000000'),
-  // };
   return createTradeResponse;
 }
 
@@ -266,11 +191,14 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
     // Get signer - as per core-sdk
     const provider = new AlchemyProvider(network, process.env.ALCHEMY_API_KEY);
     const minter = new Wallet(minterPrivateKey).connect(provider);
-  const ethHolder = new Wallet("569fe55834e8f68362961d30396f534104838f784de134541e08b89226b361ba").connect(provider);
+    const ethHolder = new Wallet(
+      '569fe55834e8f68362961d30396f534104838f784de134541e08b89226b361ba',
+    ).connect(provider);
+
+    const buyer =new Wallet("<buyer wallet private key>").connect(provider);
+    const seller = new Wallet("<seller wallet private key>").connect(provider);
 
     // const buyer = Wallet.createRandom().connect(provider);
-    const buyer =new Wallet("569fe55834e8f68362961d30396f534104838f784de134541e08b89226b361ba").connect(provider);
-    const seller = new Wallet("4f7cfd8cc1fae716406910d7de04ded04d9c0d30500ba03e22560eb01898a7c0").connect(provider);
     // const seller = Wallet.createRandom().connect(provider);
 
     console.log('Minter', minter.address, minter.privateKey);
@@ -285,6 +213,7 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
     const buyerStarkWallet = await generateStarkWallet(buyer);
     const sellerStarkWallet = await generateStarkWallet(seller);
     console.log('minterStarkWallet');
+
     //crete signatures
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const minterEthSignature = await signRaw(timestamp, minter);
@@ -334,6 +263,8 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
       },
     });
     console.log('buyer registered');
+    console.log(buyerRegisterResponse.data);
+
     const userRegisterResponse = await usersApi.registerUser({
       registerUserRequest: {
         eth_signature: sellerEthSignature,
@@ -358,13 +289,13 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
     // ).wait();
     //   console.log("Eth sent to buyer")
     // Deposit eth into buyer wallet
-    const sale_amount =ethers.utils.parseEther('0.01').toString(); //ethers.utils.parseEther('0.01').toString();
+    const sale_amount = ethers.utils.parseEther('0.01').toString(); //ethers.utils.parseEther('0.01').toString();
     // console.log(
     //   'Deposit transaction: ',
     //   await depositEth(config, workflows, buyer, sale_amount),
     // );
     //Give API time
-  await new Promise(f => setTimeout(f, 3000));
+    await new Promise(f => setTimeout(f, 3000));
     console.log(
       'Buyer ETH balance: ',
       await getUserBalance(config, buyer.address),
@@ -381,10 +312,11 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
       contract_address,
     );
     console.log(`Token minted: ${minted_token_id}`);
-     //Give API time to register the new mint
-  await new Promise(f => setTimeout(f, 3000));
+    //Give API time to register the new mint
+    await new Promise(f => setTimeout(f, 3000));
     console.log(
-      'Buyer Inventory',buyer.address,
+      'Buyer Inventory',
+      buyer.address,
       (await getUserInventory(config, buyer.address)).result.length,
     );
     // console.log(
@@ -396,7 +328,7 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
       config,
       workflows,
       seller,
-      buyerStarkWallet,
+      sellerStarkWallet,
       contract_address,
       minted_token_id,
       sale_amount,
@@ -407,7 +339,7 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
     const trade_result = await buyNFT(
       config,
       workflows,
-      seller,
+      buyer,
       buyerStarkWallet,
       order_result.order_id,
     );
@@ -419,22 +351,22 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
     );
 
     console.log(`Transaction Complete`);
-    console.log(
-      'Buyer Inventory',
-      await getUserInventory(config, buyer.address),
-    );
-    console.log(
-      'Seller Inventory',
-      await getUserInventory(config, seller.address),
-    );
-    console.log(
-      'Buyer ETH balance: ',
-      await getUserBalance(config, buyer.address),
-    );
-    console.log(
-      'Seller ETH balance: ',
-      await getUserBalance(config, buyer.address),
-    );
+    // console.log(
+    //   'Buyer Inventory',
+    //   await getUserInventory(config, buyer.address),
+    // );
+    // console.log(
+    //   'Seller Inventory',
+    //   await getUserInventory(config, seller.address),
+    // );
+    // console.log(
+    //   'Buyer ETH balance: ',
+    //   await getUserBalance(config, buyer.address),
+    // );
+    // console.log(
+    //   'Seller ETH balance: ',
+    //   await getUserBalance(config, buyer.address),
+    // );
   } catch (err) {
     console.log('Trade failed as a whole.');
     console.log(err);
