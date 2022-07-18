@@ -16,45 +16,30 @@
                 the given sell order, then signs and submits to the /trades endpoint
  */
 
-import { ethers } from 'ethers';
+import { Signer } from '@ethersproject/abstract-signer';
+import { AlchemyProvider } from '@ethersproject/providers';
+import { Wallet } from '@ethersproject/wallet';
 import {
-  ImmutableXClient,
-  ImmutableXWallet,
-  serializeSignature,
-  sign,
-} from '@imtbl/imx-sdk';
-import {
-  ERC721TokenType,
-  MintableERC721TokenType,
-  ImmutableMethodParams,
-  ETHTokenType,
-} from '@imtbl/imx-sdk';
-import { getClient } from '../utils/client';
-import yargs from 'yargs';
-import {
+  AssetsApi,
+  BalancesApi,
+  BaseSigner,
+  Config,
   EthNetwork,
   generateStarkWallet,
   getConfig,
-  signRaw,
-  UsersApi,
-  DepositsApi,
-  BalancesApi,
-  MintsApi,
-  MintsApiMintTokensRequest,
-  Config,
-  AssetsApi,
-  OrdersApi,
-  Workflows,
-  TokenType,
-  TokenDeposit,
-  StarkWallet,
   GetSignableOrderRequest,
   GetSignableTradeRequest,
-  BaseSigner,
+  serializeSignature,
+  sign,
+  signRaw,
+  StarkWallet,
+  TokenDeposit,
+  TokenType,
+  UsersApi,
+  Workflows,
 } from '@imtbl/core-sdk';
-import { AlchemyProvider } from '@ethersproject/providers';
-import { Wallet } from '@ethersproject/wallet';
-import { Signer } from '@ethersproject/abstract-signer';
+import { ethers } from 'ethers';
+import yargs from 'yargs';
 
 /**
  * Mint a token to the given user.
@@ -138,13 +123,13 @@ async function sellNFT(
     amount_buy: ethers.BigNumber.from(sale_amount).toString(),
     amount_sell: ethers.BigNumber.from('1').toString(),
     token_buy: {
-      type: ETHTokenType.ETH,
+      type: TokenType.ETH,
       data: {
         decimals: 18,
       },
     },
     token_sell: {
-      type: ERC721TokenType.ERC721,
+      type: TokenType.ERC721,
       data: {
         token_address: contractAddress,
         token_id: tokenId,
@@ -195,8 +180,8 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
       '569fe55834e8f68362961d30396f534104838f784de134541e08b89226b361ba',
     ).connect(provider);
 
-    const buyer =new Wallet("<buyer wallet private key>").connect(provider);
-    const seller = new Wallet("<seller wallet private key>").connect(provider);
+    const buyer = new Wallet('<buyer wallet private key>').connect(provider);
+    const seller = new Wallet('<seller wallet private key>').connect(provider);
 
     // const buyer = Wallet.createRandom().connect(provider);
     // const seller = Wallet.createRandom().connect(provider);

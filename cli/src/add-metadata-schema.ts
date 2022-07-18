@@ -3,10 +3,10 @@ import { Wallet } from '@ethersproject/wallet';
 import {
   EthNetwork,
   getConfig,
-  signRaw,
   MetadataApi,
   MetadataApiAddMetadataSchemaToCollectionRequest,
   MetadataSchemaRequestTypeEnum,
+  signRaw,
 } from '@imtbl/core-sdk';
 
 export default async (

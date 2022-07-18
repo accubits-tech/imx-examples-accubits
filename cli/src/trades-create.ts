@@ -1,12 +1,12 @@
 import { AlchemyProvider } from '@ethersproject/providers';
 import { Wallet } from '@ethersproject/wallet';
 import {
-  EthNetwork,
-  getConfig,
-  Workflows,
-  GetSignableTradeRequest,
-  generateStarkWallet,
   BaseSigner,
+  EthNetwork,
+  generateStarkWallet,
+  getConfig,
+  GetSignableTradeRequest,
+  Workflows,
 } from '@imtbl/core-sdk';
 
 export default async (

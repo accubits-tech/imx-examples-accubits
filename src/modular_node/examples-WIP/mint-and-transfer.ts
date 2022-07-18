@@ -6,14 +6,12 @@ import {
   EthNetwork,
   generateStarkWallet,
   getConfig,
-  MintsApi,
-  MintsApiMintTokensRequest,
   serializeSignature,
+  sign,
   signRaw,
   TokenType,
   UsersApi,
   Workflows,
-  sign
 } from '@imtbl/core-sdk';
 import yargs from 'yargs';
 
@@ -46,7 +44,6 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
   //crete signatures
   const timestamp = Math.floor(Date.now() / 1000).toString();
   // const minterEthSignature = await signRaw(timestamp, minter);
- 
 
   const config = getConfig(network);
   const usersApi = new UsersApi(config.api);
@@ -63,10 +60,14 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
       stark_key: userStarkWallet.starkPublicKey,
     },
   });
-  const { signable_message: adminSignableMessage, payload_hash: adminPayloadHash } =
-  adminSignableResult.data;
-  const { signable_message: userSignableMessage, payload_hash: userPayloadHash } =
-  userSignableResult.data;
+  const {
+    signable_message: adminSignableMessage,
+    payload_hash: adminPayloadHash,
+  } = adminSignableResult.data;
+  const {
+    signable_message: userSignableMessage,
+    payload_hash: userPayloadHash,
+  } = userSignableResult.data;
   // Sign message with L1 credentials
   const adminEthSignature = await signRaw(adminSignableMessage, admin);
   const userEthSignature = await signRaw(userSignableMessage, user);
@@ -87,7 +88,7 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
       stark_key: adminStarkWallet.starkPublicKey,
     },
   });
-  console.log("admin registered")
+  console.log('admin registered');
   const userRegisterResponse = await usersApi.registerUser({
     registerUserRequest: {
       eth_signature: userEthSignature,
@@ -96,42 +97,36 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
       stark_key: userStarkWallet.starkPublicKey,
     },
   });
-  console.log("user registered")
+  console.log('user registered');
 
   // Mint the token to the "user"
   const contract_address = '0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD'; //<DA_CONTRACT_ADDRESS_CHANGE_ME>- Contract registered by Immutable
   const workflows = new Workflows(config);
   //mint using workflow
-    const mintResponse = await workflows.mint(minter, {
-      contract_address: contract_address,
-      users: [
-        {
-          user: user.address,
-          tokens: [
-            {
-              id: random().toString(10),
-              blueprint: 'test blueprint',
-            },
-          ],
-        },
-      ],
-    });
+  const mintResponse = await workflows.mint(minter, {
+    contract_address: contract_address,
+    users: [
+      {
+        user: user.address,
+        tokens: [
+          {
+            id: random().toString(10),
+            blueprint: 'test blueprint',
+          },
+        ],
+      },
+    ],
+  });
   const mintedTokenId = mintResponse.results[0].token_id;
   const mintedTokenAddress = mintResponse.results[0].contract_address;
   console.log(`Token minted: ${mintedTokenId}`);
   //Give API time to register the new mint
   await new Promise(f => setTimeout(f, 3000));
-    console.log(
-      'Admin Inventory',
-      await getUserInventory(config, admin.address),
-    );
-    console.log(
-      'User Inventory',
-      await getUserInventory(config, user.address),
-    );
+  console.log('Admin Inventory', await getUserInventory(config, admin.address));
+  console.log('User Inventory', await getUserInventory(config, user.address));
 
   // Transfer the token to the administrator
-  console.log("sending transfer")
+  console.log('sending transfer');
   const transferResponse = await workflows.transfer(user, userStarkWallet, {
     amount: '1',
     receiver: admin.address,
@@ -147,14 +142,8 @@ async function main(minterPrivateKey: string, network: EthNetwork) {
   console.log(`Transfer Complete`);
   //Give API time to transfer the asset
   await new Promise(f => setTimeout(f, 3000));
-    console.log(
-      'Admin Inventory',
-      await getUserInventory(config, admin.address),
-    );
-    console.log(
-      'User Inventory',
-      await getUserInventory(config, user.address),
-    );
+  console.log('Admin Inventory', await getUserInventory(config, admin.address));
+  console.log('User Inventory', await getUserInventory(config, user.address));
 }
 const argv = yargs(process.argv.slice(2))
   .usage('Usage: -k <PRIVATE_KEY> --network <NETWORK>')

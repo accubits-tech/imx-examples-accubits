@@ -5,7 +5,7 @@ import {
   CollectionsApiCreateCollectionRequest,
   EthNetwork,
   getConfig,
-  signRaw,
+  signRaw
 } from '@imtbl/core-sdk';
 
 export default async (
