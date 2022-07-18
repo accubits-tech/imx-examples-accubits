@@ -1,9 +1,7 @@
+import { Signer } from '@ethersproject/abstract-signer';
 import { BigNumber } from '@ethersproject/bignumber';
-import { ethers } from 'ethers';
 import { AlchemyProvider } from '@ethersproject/providers';
 import { Wallet } from '@ethersproject/wallet';
-import { Signer } from '@ethersproject/abstract-signer';
-import dotenv from 'dotenv';
 import {
   AssetsApi,
   BalancesApi,
@@ -13,12 +11,13 @@ import {
   generateStarkWallet,
   getConfig,
   StarkWallet,
-  Transfer,
+  TokenType,
   TransfersApi,
   UnsignedTransferRequest,
-  Workflows,
-  TokenType
+  Workflows
 } from '@imtbl/core-sdk';
+import dotenv from 'dotenv';
+import { ethers } from 'ethers';
 import yargs from 'yargs';
 
 dotenv.config({ path: './.env.ropsten' });
@@ -26,14 +25,10 @@ dotenv.config({ path: './.env.ropsten' });
 const PROVIDER_KEY = process.env.PROVIDER_KEY || '';
 const STARK_CONTRACT_ADDRESS = process.env.STARK_CONTRACT_ADDRESS;
 const REGISTRATION_CONTRACT_ADDRESS = process.env.REGISTRATION_CONTRACT_ADDRESS;
-const CONTRACT_ADDRESS =
-  process.env.CONTRACT_ADDRESS || "";
-const BUYER_PRIVATE_KEY =
-  process.env.BUYER_PRIVATE_KEY || "";
-const SELLER_PRIVATE_KEY =
-  process.env.SELLER_PRIVATE_KEY || "";
-const MINTER_PRIVATE_KEY =
-  process.env.MINTER_PRIVATE_KEY || "";
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || '';
+const BUYER_PRIVATE_KEY = process.env.BUYER_PRIVATE_KEY || '';
+const SELLER_PRIVATE_KEY = process.env.SELLER_PRIVATE_KEY || '';
+const MINTER_PRIVATE_KEY = process.env.MINTER_PRIVATE_KEY || '';
 
 const provider = new ethers.providers.InfuraProvider('ropsten', PROVIDER_KEY);
 const IMX_API_ADDRESS = 'https://api.ropsten.x.immutable.com/v1';
@@ -107,17 +102,17 @@ async function pay(
  * @returns Most recent transfer between buyer and seller.
  */
 async function getMostRecentTransfer(
-  config:Config,
+  config: Config,
   buyerAddress: string,
   seller: Wallet,
-): Promise< any| null> {
-  const transfersApi= new TransfersApi(config.api)
+): Promise<any | null> {
+  const transfersApi = new TransfersApi(config.api);
   const transfers = await transfersApi.listTransfers({
     user: buyerAddress.toLowerCase(),
     receiver: seller.address.toLowerCase(),
     pageSize: 1,
-  })
-  return transfers?.data?.result[0]||null
+  });
+  return transfers?.data?.result[0] || null;
   // for (let transfer of transfers.result) {
   //   return transfer;
   // }
@@ -142,7 +137,6 @@ function validatePayment(
   amount: string,
   variance: Number,
 ): boolean {
-  
   function timeDiff(transferDate: Date): Number {
     const now = new Date();
     return (now.getTime() - transferDate.getTime()) / 1000;
@@ -153,7 +147,8 @@ function validatePayment(
     transfer.token.type === TokenType.ETH &&
     transfer.token.data.quantity.toString() === amount;
   return (
-    foundPossibleMatchingPayment && timeDiff(new Date (transfer.timestamp||0)) < variance
+    foundPossibleMatchingPayment &&
+    timeDiff(new Date(transfer.timestamp || 0)) < variance
   );
 }
 
@@ -167,7 +162,7 @@ function validatePayment(
  * @returns result of transfer.
  */
 async function transferToken(
- workflows: Workflows,
+  workflows: Workflows,
   buyerAddress: string,
   seller: Wallet,
   sellerStarkWallet: StarkWallet,
@@ -284,16 +279,20 @@ async function main(
     CONTRACT_ADDRESS,
   );
   console.log(`Token ${tokenId} minted to seller. Now let's pay for it.`);
-  console.log("wait ")
+  console.log('wait ');
   await new Promise(f => setTimeout(f, 3000));
-  console.log("wait complete")
+  console.log('wait complete');
   // 3. Buyer pays a nominated amount. Up to the implementer to keep
   // track of the respective token.
   await pay(config, workflows, buyer, buyerStarkWallet, seller.address, price);
   console.log("Payment made. Now let's validate the payment.");
   await new Promise(f => setTimeout(f, 3000));
   // 4. Check to see if the seller received the money
-  const mostRecentTransfer = await getMostRecentTransfer(config, buyer.address, seller);
+  const mostRecentTransfer = await getMostRecentTransfer(
+    config,
+    buyer.address,
+    seller,
+  );
   if (mostRecentTransfer) {
     const paymentReceived = validatePayment(
       mostRecentTransfer,
@@ -306,12 +305,18 @@ async function main(
     await new Promise(f => setTimeout(f, 3000));
     if (paymentReceived) {
       // 5. Payment was received, so let's transfer the token to the buyer
-      await transferToken(workflows,buyer.address, seller, sellerStarkWallet,tokenId);
+      await transferToken(
+        workflows,
+        buyer.address,
+        seller,
+        sellerStarkWallet,
+        tokenId,
+      );
       console.log("Token transfered. Now let's check the user inventory.");
       await new Promise(f => setTimeout(f, 5000));
 
       // 6. Check the buyers inventory to see if they received the token
-      const buyerInventory = await getUserInventory(config,buyer.address);
+      const buyerInventory = await getUserInventory(config, buyer.address);
       for (let item of buyerInventory.result) {
         if ((item as any).token_id === tokenId) {
           console.log('Buyer received item');

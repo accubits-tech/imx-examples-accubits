@@ -7,7 +7,7 @@ import {
   serializeSignature,
   sign,
   signRaw,
-  UsersApi,
+  UsersApi
 } from '@imtbl/core-sdk';
 
 export default async (

@@ -1,18 +1,16 @@
-import yargs from 'yargs';
-import {
-  getConfig,
-  EthNetwork,
-  Workflows,
-  generateStarkWallet,
-  UnsignedBurnRequest,
-  TokenType,
-  MintsApi,
-  Mint,
-  MintsApiMintTokensRequest,
-  signRaw,
-} from '@imtbl/core-sdk';
 import { AlchemyProvider } from '@ethersproject/providers';
 import { Wallet } from '@ethersproject/wallet';
+import {
+  EthNetwork,
+  generateStarkWallet,
+  getConfig,
+  MintsApi,
+  signRaw,
+  TokenType,
+  UnsignedBurnRequest,
+  Workflows,
+} from '@imtbl/core-sdk';
+import yargs from 'yargs';
 
 function random(): number {
   const min = 1;
@@ -26,7 +24,10 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     const config = getConfig(network);
     const workflows = new Workflows(config);
     // Get signer - as per core-sdk
-    const provider = new AlchemyProvider(network,"DvukuyBzEK-JyP6zp1NVeNVYLJCrzjp_"); // process.env.ALCHEMY_API_KEY
+    const provider = new AlchemyProvider(
+      network,
+      'DvukuyBzEK-JyP6zp1NVeNVYLJCrzjp_',
+    ); // process.env.ALCHEMY_API_KEY
     const signer = new Wallet(ownerPrivateKey).connect(provider);
     // generate your own stark wallet
     const starkWallet = await generateStarkWallet(signer);
@@ -39,7 +40,7 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
       amount: '1',
       sender: '0xb064ddf8a93ae2867773188eb3c79ea3a22874ff', //process.env.WALLET_ADDRESS || '',
       token: {
-        type:TokenType.ERC721,
+        type: TokenType.ERC721,
         data: {
           token_id: '66',
           token_address: '0xf420aa4c2bfbcd0203901dd7f207224f6ea803fd',
@@ -60,12 +61,12 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
     //Give API time to register the burn
     await new Promise(f => setTimeout(f, 3000));
 
-    //Fetch the burn 
+    //Fetch the burn
     const getBurnResponse = await workflows.getBurn({
       id: burnResponse?.transfer_id?.toString(),
     });
-    console.log("getBurnResponse")
-    console.log(getBurnResponse)
+    console.log('getBurnResponse');
+    console.log(getBurnResponse);
     const getBurnResponseData = getBurnResponse.data || {};
 
     // See if the fetched burn is successful, otherwise don't mint
@@ -78,21 +79,21 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
       //Attempt to mint an asset on the back of the burn
       const mintsApi = new MintsApi(config.api);
       const mintResponse = await workflows.mint(signer, {
-        contract_address: "0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD",
+        contract_address: '0xf420aA4c2BFBCd0203901Dd7F207224f6eA803fD',
         users: [
           {
             user: signer.address,
             tokens: [
               {
-                id:random().toString(10),
+                id: random().toString(10),
                 blueprint: 'none',
               },
             ],
           },
         ],
       });
-    console.log('Mint response:');
-    console.log(mintResponse);
+      console.log('Mint response:');
+      console.log(mintResponse);
       //Give API time to register the new mint
       await new Promise(f => setTimeout(f, 3000));
 
@@ -101,7 +102,7 @@ async function main(ownerPrivateKey: string, network: EthNetwork) {
         id: mintResponse.results[0].tx_id.toString(),
       });
       const mintFetchData: any = mintFetch?.data || {}; //As per data type in core-sdk it should be Mint obj but getting array -To be checked
-      console.log("mintFetchData")
+      console.log('mintFetchData');
       console.log(mintFetchData);
       //If the mint is fetched and successful then mint
       if (mintFetchData[0].status == 'success') {
